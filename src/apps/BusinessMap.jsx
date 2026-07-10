@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Map, CustomOverlayMap, useMap } from 'react-kakao-maps-sdk';
+import { Map, CustomOverlayMap, useMap, useKakaoLoader } from 'react-kakao-maps-sdk';
 import { Search, Users, Calendar, MapPin, Navigation, X } from 'lucide-react';
 import { subscribeToMembers, subscribeToMeetings } from '../services/memberService';
 
@@ -196,6 +196,11 @@ function OutOfBoundsOverlay({ members, meetings, showMembers, showMeetings }) {
 }
 
 export default function BusinessMap() {
+  const [loading, error] = useKakaoLoader({
+    appkey: "ee0b25764b258b22f4a955e76bbb2892",
+    libraries: ["services", "clusterer"]
+  });
+
   const [members, setMembers] = useState([]);
   const [meetings, setMeetings] = useState([]);
 
@@ -366,28 +371,57 @@ export default function BusinessMap() {
 
       {/* Map Container */}
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative', zIndex: 1, background: '#e5e3df' }}>
-        <Map
-          center={mapCenter}
-          level={mapZoom}
-          style={{ width: '100%', height: '100%' }}
-          onClick={() => setActiveMarker(null)} // Close popups on map click
-        >
-          {/* Member Pins */}
-          {showMembers && filteredMembers.map(member => {
-            const { color, icon } = getCategoryColorAndIcon(member);
-            return (
-              <CustomOverlayMap key={`member-${member.id}`} position={{ lat: member.lat || 37.5, lng: member.lng || 127.0 }} yAnchor={1} zIndex={activeMarker === member.id ? 100 : 1}>
-                <div style={{ position: 'relative' }}>
-                  <div onClick={(e) => { e.stopPropagation(); setActiveMarker(member.id); }} style={{ backgroundColor: color, width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid white', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', cursor: 'pointer', marginBottom: '8px' }}>
-                    <div style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>{icon}</div>
+        {loading ? (
+          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666', fontWeight: 'bold' }}>지도 불러오는 중...</div>
+        ) : error ? (
+          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff4757', fontWeight: 'bold' }}>지도 로드 실패: API 키 혹은 도메인을 확인해주세요.</div>
+        ) : (
+          <Map
+            center={mapCenter}
+            level={mapZoom}
+            style={{ width: '100%', height: '100%' }}
+            onClick={() => setActiveMarker(null)} // Close popups on map click
+          >
+            {/* Member Pins */}
+            {showMembers && filteredMembers.map(member => {
+              const { color, icon } = getCategoryColorAndIcon(member);
+              return (
+                <CustomOverlayMap key={`member-${member.id}`} position={{ lat: member.lat || 37.5, lng: member.lng || 127.0 }} yAnchor={1} zIndex={activeMarker === member.id ? 100 : 1}>
+                  <div style={{ position: 'relative' }}>
+                    <div onClick={(e) => { e.stopPropagation(); setActiveMarker(member.id); }} style={{ backgroundColor: color, width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid white', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', cursor: 'pointer', marginBottom: '8px' }}>
+                      <div style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>{icon}</div>
+                    </div>
+                    {activeMarker === member.id && (
+                      <div style={{ position: 'absolute', bottom: '60px', left: '50%', transform: 'translateX(-50%)', background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', width: '220px', zIndex: 1000, pointerEvents: 'auto' }}>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#000', marginBottom: '2px' }}>{member.name} 대표</div>
+                          <div style={{ color: '#555', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>{member.company} <span style={{ color: color }}>({member.category})</span></div>
+                          <div style={{ color: '#888', fontSize: '12px', marginBottom: '12px', wordBreak: 'keep-all', lineHeight: '1.4' }}>{member.address}</div>
+                          <button style={{ width: '100%', padding: '8px', background: color, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', transition: 'opacity 0.2s' }} onMouseOver={(e) => e.target.style.opacity=0.8} onMouseOut={(e) => e.target.style.opacity=1}>프로필 보기</button>
+                          <button onClick={(e) => { e.stopPropagation(); setActiveMarker(null); }} style={{ position: 'absolute', top: '8px', right: '8px', border: 'none', background: 'rgba(0,0,0,0.05)', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '14px', color: '#666' }}>&times;</button>
+                        </div>
+                        <div style={{ position: 'absolute', bottom: '-8px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '10px solid transparent', borderRight: '10px solid transparent', borderTop: '10px solid white' }}></div>
+                      </div>
+                    )}
                   </div>
-                  {activeMarker === member.id && (
+                </CustomOverlayMap>
+              );
+            })}
+
+            {/* Meeting Pins */}
+            {showMeetings && meetings.map(meeting => (
+              <CustomOverlayMap key={`meeting-${meeting.id}`} position={{ lat: meeting.lat || 37.5, lng: meeting.lng || 127.0 }} yAnchor={1} zIndex={activeMarker === `mtg-${meeting.id}` ? 100 : 1}>
+                <div style={{ position: 'relative' }}>
+                  <div onClick={(e) => { e.stopPropagation(); setActiveMarker(`mtg-${meeting.id}`); }} style={{ backgroundColor: '#ff4757', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid white', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', cursor: 'pointer', marginBottom: '8px' }}>
+                    <div style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>🤝</div>
+                  </div>
+                  {activeMarker === `mtg-${meeting.id}` && (
                     <div style={{ position: 'absolute', bottom: '60px', left: '50%', transform: 'translateX(-50%)', background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', width: '220px', zIndex: 1000, pointerEvents: 'auto' }}>
                       <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#000', marginBottom: '2px' }}>{member.name} 대표</div>
-                        <div style={{ color: '#555', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>{member.company} <span style={{ color: color }}>({member.category})</span></div>
-                        <div style={{ color: '#888', fontSize: '12px', marginBottom: '12px', wordBreak: 'keep-all', lineHeight: '1.4' }}>{member.address}</div>
-                        <button style={{ width: '100%', padding: '8px', background: color, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', transition: 'opacity 0.2s' }} onMouseOver={(e) => e.target.style.opacity=0.8} onMouseOut={(e) => e.target.style.opacity=1}>프로필 보기</button>
+                        <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#ff4757', marginBottom: '4px' }}>원투원 미팅</div>
+                        <div style={{ color: '#000', fontSize: '14px', margin: '8px 0', fontWeight: 'bold' }}>{meeting.title}</div>
+                        <div style={{ color: '#666', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '4px' }}><Calendar size={14} /> {meeting.date}</div>
+                        <div style={{ color: '#666', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><MapPin size={14} /> {meeting.locationName}</div>
                         <button onClick={(e) => { e.stopPropagation(); setActiveMarker(null); }} style={{ position: 'absolute', top: '8px', right: '8px', border: 'none', background: 'rgba(0,0,0,0.05)', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '14px', color: '#666' }}>&times;</button>
                       </div>
                       <div style={{ position: 'absolute', bottom: '-8px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '10px solid transparent', borderRight: '10px solid transparent', borderTop: '10px solid white' }}></div>
@@ -395,57 +429,34 @@ export default function BusinessMap() {
                   )}
                 </div>
               </CustomOverlayMap>
-            );
-          })}
+            ))}
 
-          {/* Meeting Pins */}
-          {showMeetings && meetings.map(meeting => (
-            <CustomOverlayMap key={`meeting-${meeting.id}`} position={{ lat: meeting.lat || 37.5, lng: meeting.lng || 127.0 }} yAnchor={1} zIndex={activeMarker === `mtg-${meeting.id}` ? 100 : 1}>
-              <div style={{ position: 'relative' }}>
-                <div onClick={(e) => { e.stopPropagation(); setActiveMarker(`mtg-${meeting.id}`); }} style={{ backgroundColor: '#ff4757', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid white', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', cursor: 'pointer', marginBottom: '8px' }}>
-                  <div style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>🤝</div>
-                </div>
-                {activeMarker === `mtg-${meeting.id}` && (
-                  <div style={{ position: 'absolute', bottom: '60px', left: '50%', transform: 'translateX(-50%)', background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', width: '220px', zIndex: 1000, pointerEvents: 'auto' }}>
+            {/* Search Result Pin */}
+            {searchedLocation && (
+              <CustomOverlayMap position={{ lat: searchedLocation.lat, lng: searchedLocation.lng }} yAnchor={1} zIndex={100}>
+                <div style={{ position: 'relative' }}>
+                  <div style={{ backgroundColor: '#2ed573', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid white', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', cursor: 'pointer', marginBottom: '8px' }}>
+                    <div style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>📍</div>
+                  </div>
+                  <div style={{ position: 'absolute', bottom: '60px', left: '50%', transform: 'translateX(-50%)', background: 'white', padding: '12px 16px', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', minWidth: '160px', zIndex: 1000, pointerEvents: 'auto' }}>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#ff4757', marginBottom: '4px' }}>원투원 미팅</div>
-                      <div style={{ color: '#000', fontSize: '14px', margin: '8px 0', fontWeight: 'bold' }}>{meeting.title}</div>
-                      <div style={{ color: '#666', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '4px' }}><Calendar size={14} /> {meeting.date}</div>
-                      <div style={{ color: '#666', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><MapPin size={14} /> {meeting.locationName}</div>
-                      <button onClick={(e) => { e.stopPropagation(); setActiveMarker(null); }} style={{ position: 'absolute', top: '8px', right: '8px', border: 'none', background: 'rgba(0,0,0,0.05)', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '14px', color: '#666' }}>&times;</button>
+                      <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#2ed573', marginBottom: '4px' }}>검색 결과</div>
+                      <div style={{ color: '#444', fontSize: '13px', wordBreak: 'keep-all', fontWeight: '500' }}>{searchedLocation.name}</div>
                     </div>
                     <div style={{ position: 'absolute', bottom: '-8px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '10px solid transparent', borderRight: '10px solid transparent', borderTop: '10px solid white' }}></div>
                   </div>
-                )}
-              </div>
-            </CustomOverlayMap>
-          ))}
-
-          {/* Search Result Pin */}
-          {searchedLocation && (
-            <CustomOverlayMap position={{ lat: searchedLocation.lat, lng: searchedLocation.lng }} yAnchor={1} zIndex={100}>
-              <div style={{ position: 'relative' }}>
-                <div style={{ backgroundColor: '#2ed573', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid white', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', cursor: 'pointer', marginBottom: '8px' }}>
-                  <div style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>📍</div>
                 </div>
-                <div style={{ position: 'absolute', bottom: '60px', left: '50%', transform: 'translateX(-50%)', background: 'white', padding: '12px 16px', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', minWidth: '160px', zIndex: 1000, pointerEvents: 'auto' }}>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#2ed573', marginBottom: '4px' }}>검색 결과</div>
-                    <div style={{ color: '#444', fontSize: '13px', wordBreak: 'keep-all', fontWeight: '500' }}>{searchedLocation.name}</div>
-                  </div>
-                  <div style={{ position: 'absolute', bottom: '-8px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '10px solid transparent', borderRight: '10px solid transparent', borderTop: '10px solid white' }}></div>
-                </div>
-              </div>
-            </CustomOverlayMap>
-          )}
+              </CustomOverlayMap>
+            )}
 
-          <OutOfBoundsOverlay 
-            members={filteredMembers} 
-            meetings={meetings} 
-            showMembers={showMembers} 
-            showMeetings={showMeetings} 
-          />
-        </Map>
+            <OutOfBoundsOverlay 
+              members={filteredMembers} 
+              meetings={meetings} 
+              showMembers={showMembers} 
+              showMeetings={showMeetings} 
+            />
+          </Map>
+        )}
       </div>
     </div>
   );
