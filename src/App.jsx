@@ -102,6 +102,10 @@ function AppContent() {
           onClick={() => handleOpenApp(apps.find(a => a.id === 'settings'))}
         >시스템 설정</div>
         <div 
+          style={{ marginRight: '16px', cursor: 'pointer', whiteSpace: 'nowrap', color: '#ffbd2e' }}
+          onClick={() => handleOpenApp({ id: 'admin-portal', name: '관리자 일괄 등록', icon: 'Shield', color: '#ffbd2e' })}
+        >관리자 도구</div>
+        <div 
           style={{ marginRight: '16px', cursor: 'pointer', color: '#ff4757', whiteSpace: 'nowrap' }}
           onClick={logout}
         >로그아웃</div>

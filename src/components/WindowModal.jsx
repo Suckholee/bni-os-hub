@@ -6,6 +6,7 @@ import BniSunshine from '../apps/BniSunshine';
 import BniBriefing from '../apps/BniBriefing';
 import BniMagazine from '../apps/BniMagazine';
 import SettingsApp from '../apps/SettingsApp';
+import AdminPortal from '../apps/AdminPortal';
 import GenericApp from '../apps/GenericApp';
 import CalendarApp from '../apps/CalendarApp';
 import OneToOneDrive from '../apps/OneToOneDrive';
@@ -80,7 +81,8 @@ export default function WindowModal({ app, onClose }) {
         {app.id === 'feed' && <ChapterFeed />}
         {app.id === 'vcp' && <VcpTracker />}
         {app.id === 'business-map' && <BusinessMap />}
-        {!['blog', 'bni-excellent', 'bni-sunshine', 'bni-briefing', 'bni-magazine', 'settings', 'calendar', 'one-to-one', 'directory', 'feed', 'vcp', 'business-map'].includes(app.id) && <GenericApp app={app} />}
+        {app.id === 'admin-portal' && <AdminPortal />}
+        {!['blog', 'bni-excellent', 'bni-sunshine', 'bni-briefing', 'bni-magazine', 'settings', 'calendar', 'one-to-one', 'directory', 'feed', 'vcp', 'business-map', 'admin-portal'].includes(app.id) && <GenericApp app={app} />}
       </div>
     </div>
   );
