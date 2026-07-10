@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Phone, Mail, Building2, Camera, Loader2, Save } from 'lucide-react';
+import { subscribeToMembers } from '../services/memberService';
 
 export default function MemberDirectory() {
   const [activeTab, setActiveTab] = useState('list');
@@ -8,11 +9,14 @@ export default function MemberDirectory() {
     name: '', category: '', company: '', phone: '', email: '', address: ''
   });
 
-  const [members, setMembers] = useState([
-    { name: '홍길동', category: '세무사', company: '홍택스 컨설팅', tag: '법률/재무', color: '#3742fa', phone: '010-1234-5678', email: 'hong@tax.com' },
-    { name: '이영희', category: '인테리어 디자인', company: '공간미학', tag: '건축/인테리어', color: '#ff6b81', phone: '010-2345-6789', email: 'lee@space.com' },
-    { name: '김철수', category: '온라인 마케팅', company: '애드테크', tag: '마케팅/IT', color: '#2ed573', phone: '010-3456-7890', email: 'kim@adtech.com' },
-  ]);
+  const [members, setMembers] = useState([]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToMembers((data) => {
+      setMembers(data);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
