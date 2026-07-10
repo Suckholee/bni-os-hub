@@ -17,7 +17,25 @@ const createCustomIcon = (color, IconComponent) => {
   });
 };
 
-const memberIcon = createCustomIcon('#3742fa', '👤');
+const getCategoryIcon = (member) => {
+  const category = (member.category || '').toLowerCase();
+  const tag = (member.tag || '').toLowerCase();
+  
+  if (tag.includes('음식') || tag.includes('요식') || category.includes('음식') || category.includes('요식') || category.includes('식품')) return createCustomIcon('#e15f41', '🍽️');
+  if (tag.includes('건축') || tag.includes('인테리어') || category.includes('인테리어') || category.includes('건축') || category.includes('조명')) return createCustomIcon('#f19066', '🏗️');
+  if (tag.includes('유통') || category.includes('유통')) return createCustomIcon('#786fa6', '📦');
+  if (tag.includes('건강') || tag.includes('의료') || category.includes('건강') || category.includes('의료') || category.includes('병원') || category.includes('안과')) return createCustomIcon('#ea8685', '⚕️');
+  if (tag.includes('교육') || tag.includes('코칭') || category.includes('교육') || category.includes('코칭')) return createCustomIcon('#63cdda', '🎓');
+  if (tag.includes('부동산') || category.includes('부동산')) return createCustomIcon('#f3a683', '🏠');
+  if (category.includes('꽃') || category.includes('플라워')) return createCustomIcon('#ffb8b8', '🌸');
+  if (category.includes('법률') || category.includes('세무') || category.includes('노무') || category.includes('회계') || category.includes('변호사')) return createCustomIcon('#3dc1d3', '⚖️');
+  if (category.includes('금융') || category.includes('보험')) return createCustomIcon('#f5cd79', '💰');
+  if (category.includes('it') || category.includes('소프트웨어') || category.includes('개발') || category.includes('컴퓨터') || category.includes('마케팅')) return createCustomIcon('#546de5', '💻');
+  if (category.includes('스포츠') || category.includes('골프') || category.includes('레져')) return createCustomIcon('#1abc9c', '⛳');
+  
+  return createCustomIcon('#3742fa', '👤');
+};
+
 const meetingIcon = createCustomIcon('#ff4757', '🤝');
 const searchIcon = createCustomIcon('#2ed573', '📍');
 
@@ -319,7 +337,7 @@ export default function BusinessMap() {
           
           {/* Member Pins */}
           {showMembers && members.map(member => (
-            <Marker key={`member-${member.id}`} position={[member.lat || 37.5, member.lng || 127.0]} icon={memberIcon}>
+            <Marker key={`member-${member.id}`} position={[member.lat || 37.5, member.lng || 127.0]} icon={getCategoryIcon(member)}>
               <Popup>
                 <div style={{ textAlign: 'center', minWidth: '150px' }}>
                   <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#000' }}>{member.name} 대표</div>
