@@ -405,7 +405,7 @@ export default function BusinessMap() {
       alert('카카오 API가 준비되지 않았습니다.');
       return;
     }
-    window.Kakao.Navi.start({
+    window.Kakao.Navi.share({
       name: name || '도착지',
       x: Number(lng),
       y: Number(lat),
