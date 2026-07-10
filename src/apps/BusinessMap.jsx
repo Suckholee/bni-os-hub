@@ -51,6 +51,7 @@ function getDistance(lat1, lon1, lat2, lon2) {
 function OutOfBoundsOverlay({ members, meetings, showMembers, showMeetings }) {
   const map = useMap();
   const [markers, setMarkers] = useState([]);
+  const [activeCluster, setActiveCluster] = useState(null);
 
   useEffect(() => {
     if (!map || !window.kakao) return;
@@ -162,36 +163,115 @@ function OutOfBoundsOverlay({ members, meetings, showMembers, showMeetings }) {
   if (markers.length === 0) return null;
 
   return (
-    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1000, overflow: 'hidden' }}>
-      {markers.map(m => {
-        const count = m.items.length;
-        const isCluster = count > 1;
-        return (
-          <div key={m.id} style={{
+    <>
+      <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1000, overflow: 'hidden' }}>
+        {markers.map(m => {
+          const count = m.items.length;
+          const isCluster = count > 1;
+          const isActive = activeCluster && activeCluster.id === m.id;
+
+          return (
+            <div key={m.id} style={{ position: 'absolute', left: m.x, top: m.y, pointerEvents: 'auto' }}>
+              <div 
+                onClick={(e) => { e.stopPropagation(); setActiveCluster(isActive ? null : m); }}
+                style={{
+                  transform: 'translate(-50%, -50%)',
+                  background: isActive ? '#3742fa' : 'rgba(0,0,0,0.7)',
+                  color: 'white',
+                  padding: '6px 12px',
+                  borderRadius: '16px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  border: `2px solid ${m.type === 'member' ? (isActive ? 'white' : '#3742fa') : (isActive ? 'white' : '#ff4757')}`,
+                  backdropFilter: 'blur(4px)',
+                  boxShadow: isActive ? '0 0 0 4px rgba(55,66,250,0.2)' : '0 4px 6px rgba(0,0,0,0.3)',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <div style={{ transform: `rotate(${m.angle}deg)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>➤</div>
+                {isCluster ? `+${count}명 (${m.distStr} 외)` : m.distStr}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Centered Modal for Active Cluster */}
+      {activeCluster && (
+        <div 
+          style={{
             position: 'absolute',
-            left: m.x,
-            top: m.y,
-            transform: 'translate(-50%, -50%)',
-            background: 'rgba(0,0,0,0.7)',
-            color: 'white',
-            padding: '4px 8px',
-            borderRadius: '12px',
-            fontSize: '11px',
-            fontWeight: 'bold',
+            top: 0, left: 0, width: '100%', height: '100%',
+            background: 'rgba(0,0,0,0.4)',
+            zIndex: 1001,
             display: 'flex',
             alignItems: 'center',
-            gap: '4px',
-            border: `1px solid ${m.type === 'member' ? '#3742fa' : '#ff4757'}`,
-            backdropFilter: 'blur(4px)',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-            whiteSpace: 'nowrap'
-          }}>
-            <div style={{ transform: `rotate(${m.angle}deg)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>➤</div>
-            {isCluster ? `+${count}명 (${m.distStr} 외)` : m.distStr}
+            justifyContent: 'center',
+            pointerEvents: 'auto',
+            backdropFilter: 'blur(2px)'
+          }}
+          onClick={(e) => { e.stopPropagation(); setActiveCluster(null); }}
+        >
+          <div 
+            style={{
+              background: 'white',
+              borderRadius: '20px',
+              padding: '24px',
+              width: '90%',
+              maxWidth: '360px',
+              maxHeight: '70vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ fontWeight: 'bold', fontSize: '18px', color: '#000' }}>
+                {activeCluster.type === 'member' ? `해당 방향 멤버 (${activeCluster.items.length}명)` : `해당 방향 미팅 (${activeCluster.items.length}건)`}
+              </div>
+              <button onClick={() => setActiveCluster(null)} style={{ border: 'none', background: '#f0f0f0', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', color: '#666', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', transition: 'background 0.2s' }} onMouseOver={(e)=>e.currentTarget.style.background='#e0e0e0'} onMouseOut={(e)=>e.currentTarget.style.background='#f0f0f0'}>&times;</button>
+            </div>
+
+            <div className="hide-scrollbar" style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', paddingRight: '4px' }}>
+              {activeCluster.items.map((item, idx) => {
+                if (activeCluster.type === 'member') {
+                  const member = members.find(mem => mem.id === item.id);
+                  if (!member) return null;
+                  return (
+                    <div key={idx} style={{ padding: '16px', background: '#f8f9fa', borderRadius: '16px', border: '1px solid #eee' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                        <div style={{ fontWeight: 'bold', color: '#000', fontSize: '15px' }}>{member.name} 대표</div>
+                        <div style={{ fontSize: '12px', color: '#888', background: '#eee', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>{item.distStr}</div>
+                      </div>
+                      <div style={{ color: '#333', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>{member.company}</div>
+                      <div style={{ color: '#888', fontSize: '12px', lineHeight: '1.4', wordBreak: 'keep-all' }}>{member.address}</div>
+                    </div>
+                  );
+                } else {
+                  const meeting = meetings.find(mtg => mtg.id === item.id);
+                  if (!meeting) return null;
+                  return (
+                    <div key={idx} style={{ padding: '16px', background: '#fff0f2', borderRadius: '16px', border: '1px solid #ffe3e6' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                        <div style={{ fontWeight: 'bold', color: '#ff4757', fontSize: '15px' }}>{meeting.title}</div>
+                        <div style={{ fontSize: '12px', color: '#ff4757', background: '#ffe3e6', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>{item.distStr}</div>
+                      </div>
+                      <div style={{ color: '#444', fontSize: '13px', lineHeight: '1.4', wordBreak: 'keep-all' }}>{meeting.locationName}</div>
+                    </div>
+                  );
+                }
+              })}
+            </div>
           </div>
-        );
-      })}
-    </div>
+        </div>
+      )}
+    </>
   );
 }
 
