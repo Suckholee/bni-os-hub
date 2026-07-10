@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Maximize2, Minus } from 'lucide-react';
 import BlogApp from '../apps/BlogApp';
 import BniExcellent from '../apps/BniExcellent';
@@ -16,19 +16,22 @@ import VcpTracker from '../apps/VcpTracker';
 import BusinessMap from '../apps/BusinessMap';
 
 export default function WindowModal({ app, onClose }) {
+  const [isFullscreen, setIsFullscreen] = useState(app.id === 'business-map');
+
   return (
     <div 
       style={{
         position: 'absolute',
-        top: '10%',
-        left: '15%',
-        width: '70%',
-        height: '75%',
-        borderRadius: '16px',
+        top: isFullscreen ? 0 : '10%',
+        left: isFullscreen ? 0 : '15%',
+        width: isFullscreen ? '100%' : '70%',
+        height: isFullscreen ? '100%' : '75%',
+        borderRadius: isFullscreen ? 0 : '16px',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
         zIndex: 50,
+        transition: 'all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
         animation: 'popIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
       }}
       className="glass-window"
@@ -57,9 +60,14 @@ export default function WindowModal({ app, onClose }) {
           <div 
             onClick={onClose}
             style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#ff5f56', cursor: 'pointer' }} 
+            title="닫기"
           />
           <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#ffbd2e' }} />
-          <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#27c93f' }} />
+          <div 
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#27c93f', cursor: 'pointer' }} 
+            title="전체화면"
+          />
         </div>
         <div style={{ flex: 1, textAlign: 'center', fontSize: '14px', fontWeight: 500, opacity: 0.8 }}>
           {app.name}
@@ -68,7 +76,7 @@ export default function WindowModal({ app, onClose }) {
       </div>
 
       {/* Window Content */}
-      <div className="mobile-padding" style={{ flex: 1, padding: '32px', overflowY: 'auto' }}>
+      <div className={(isFullscreen && app.id === 'business-map') ? '' : 'mobile-padding'} style={{ flex: 1, padding: (isFullscreen && app.id === 'business-map') ? 0 : '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
         {app.id === 'blog' && <BlogApp />}
         {app.id === 'bni-excellent' && <BniExcellent />}
         {app.id === 'bni-sunshine' && <BniSunshine />}

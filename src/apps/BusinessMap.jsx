@@ -298,8 +298,8 @@ export default function BusinessMap() {
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Header & Controls */}
-      <div style={{ paddingBottom: '16px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '16px' }}>비즈니스 맵 🗺️</h2>
+      <div style={{ padding: '16px 24px', paddingBottom: '12px' }}>
+        <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '16px', display: 'none' }}>비즈니스 맵 🗺️</h2>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {/* Filters Row */}
@@ -371,7 +371,7 @@ export default function BusinessMap() {
       </div>
 
       {/* Map Container */}
-      <div style={{ flex: 1, borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', position: 'relative', zIndex: 1 }}>
+      <div style={{ flex: 1, overflow: 'hidden', position: 'relative', zIndex: 1 }}>
         <MapContainer 
           center={mapCenter} 
           zoom={mapZoom} 
