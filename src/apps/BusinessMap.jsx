@@ -1,43 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
-import { Search, Users, Calendar, MapPin, Navigation } from 'lucide-react';
+import { Map, CustomOverlayMap, useMap } from 'react-kakao-maps-sdk';
+import { Search, Users, Calendar, MapPin, Navigation, X } from 'lucide-react';
 import { subscribeToMembers, subscribeToMeetings } from '../services/memberService';
 
-// Custom icons using Lucide SVGs wrapped in L.divIcon
-const createCustomIcon = (color, IconComponent) => {
-  const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>`;
-  return L.divIcon({
-    className: 'custom-leaflet-icon',
-    html: `<div style="background-color: ${color}; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.3);"><div style="color: white; font-weight: bold; font-size: 14px;">${IconComponent}</div></div>`,
-    iconSize: [36, 36],
-    iconAnchor: [18, 36],
-    popupAnchor: [0, -36]
-  });
-};
-
-const getCategoryIcon = (member) => {
+const getCategoryColorAndIcon = (member) => {
   const category = (member.category || '').toLowerCase();
   const tag = (member.tag || '').toLowerCase();
   
-  if (tag.includes('음식') || tag.includes('요식') || category.includes('음식') || category.includes('요식') || category.includes('식품')) return createCustomIcon('#e15f41', '🍽️');
-  if (tag.includes('건축') || tag.includes('인테리어') || category.includes('인테리어') || category.includes('건축') || category.includes('조명')) return createCustomIcon('#f19066', '🏗️');
-  if (tag.includes('유통') || category.includes('유통')) return createCustomIcon('#786fa6', '📦');
-  if (tag.includes('건강') || tag.includes('의료') || category.includes('건강') || category.includes('의료') || category.includes('병원') || category.includes('안과')) return createCustomIcon('#ea8685', '⚕️');
-  if (tag.includes('교육') || tag.includes('코칭') || category.includes('교육') || category.includes('코칭')) return createCustomIcon('#63cdda', '🎓');
-  if (tag.includes('부동산') || category.includes('부동산')) return createCustomIcon('#f3a683', '🏠');
-  if (category.includes('꽃') || category.includes('플라워')) return createCustomIcon('#ffb8b8', '🌸');
-  if (category.includes('법률') || category.includes('세무') || category.includes('노무') || category.includes('회계') || category.includes('변호사')) return createCustomIcon('#3dc1d3', '⚖️');
-  if (category.includes('금융') || category.includes('보험')) return createCustomIcon('#f5cd79', '💰');
-  if (category.includes('it') || category.includes('소프트웨어') || category.includes('개발') || category.includes('컴퓨터') || category.includes('마케팅')) return createCustomIcon('#546de5', '💻');
-  if (category.includes('스포츠') || category.includes('골프') || category.includes('레져')) return createCustomIcon('#1abc9c', '⛳');
+  if (tag.includes('음식') || tag.includes('요식') || category.includes('음식') || category.includes('요식') || category.includes('식품')) return { color: '#e15f41', icon: '🍽️' };
+  if (tag.includes('건축') || tag.includes('인테리어') || category.includes('인테리어') || category.includes('건축') || category.includes('조명')) return { color: '#f19066', icon: '🏗️' };
+  if (tag.includes('유통') || category.includes('유통')) return { color: '#786fa6', icon: '📦' };
+  if (tag.includes('건강') || tag.includes('의료') || category.includes('건강') || category.includes('의료') || category.includes('병원') || category.includes('안과')) return { color: '#ea8685', icon: '⚕️' };
+  if (tag.includes('교육') || tag.includes('코칭') || category.includes('교육') || category.includes('코칭')) return { color: '#63cdda', icon: '🎓' };
+  if (tag.includes('부동산') || category.includes('부동산')) return { color: '#f3a683', icon: '🏠' };
+  if (category.includes('꽃') || category.includes('플라워')) return { color: '#ffb8b8', icon: '🌸' };
+  if (category.includes('법률') || category.includes('세무') || category.includes('노무') || category.includes('회계') || category.includes('변호사')) return { color: '#3dc1d3', icon: '⚖️' };
+  if (category.includes('금융') || category.includes('보험')) return { color: '#f5cd79', icon: '💰' };
+  if (category.includes('it') || category.includes('소프트웨어') || category.includes('개발') || category.includes('컴퓨터') || category.includes('마케팅')) return { color: '#546de5', icon: '💻' };
+  if (category.includes('스포츠') || category.includes('골프') || category.includes('레져')) return { color: '#1abc9c', icon: '⛳' };
   
-  return createCustomIcon('#3742fa', '👤');
+  return { color: '#3742fa', icon: '👤' };
 };
-
-const meetingIcon = createCustomIcon('#ff4757', '🤝');
-const searchIcon = createCustomIcon('#2ed573', '📍');
 
 const FILTER_CATEGORIES = [
   { id: 'all', label: '전체', icon: '🌐' },
@@ -54,14 +37,15 @@ const FILTER_CATEGORIES = [
   { id: '꽃', label: '플라워', icon: '🌸', keywords: ['꽃', '플라워'] },
 ];
 
-function MapController({ center, zoom }) {
-  const map = useMap();
-  useEffect(() => {
-    if (center) {
-      map.flyTo(center, zoom, { duration: 1.5 });
-    }
-  }, [center, zoom, map]);
-  return null;
+function getDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371e3; // metres
+  const p1 = lat1 * Math.PI/180;
+  const p2 = lat2 * Math.PI/180;
+  const dp = (lat2-lat1) * Math.PI/180;
+  const dl = (lon2-lon1) * Math.PI/180;
+  const a = Math.sin(dp/2) * Math.sin(dp/2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
 }
 
 function OutOfBoundsOverlay({ members, meetings, showMembers, showMeetings }) {
@@ -69,27 +53,39 @@ function OutOfBoundsOverlay({ members, meetings, showMembers, showMeetings }) {
   const [markers, setMarkers] = useState([]);
 
   useEffect(() => {
+    if (!map || !window.kakao) return;
+
     const updateMarkers = () => {
       const bounds = map.getBounds();
       const center = map.getCenter();
-      const size = map.getSize();
+      const projection = map.getProjection();
+      
+      const mapDiv = map.getNode();
+      const size = { x: mapDiv.clientWidth, y: mapDiv.clientHeight };
       const pad = 30; // padding from edge
       
       const newMarkers = [];
       const processItems = (items, type) => {
         items.forEach(item => {
           if (!item.lat || !item.lng) return;
-          const latlng = L.latLng(item.lat, item.lng);
-          if (!bounds.contains(latlng)) {
-            const dist = center.distanceTo(latlng);
+          const itemLatLng = new window.kakao.maps.LatLng(item.lat, item.lng);
+          
+          if (!bounds.contain(itemLatLng)) {
+            const dist = getDistance(center.getLat(), center.getLng(), item.lat, item.lng);
             const distStr = dist > 1000 ? (dist/1000).toFixed(1) + 'km' : Math.round(dist) + 'm';
             
-            const pt = map.latLngToContainerPoint(latlng);
+            let pt;
+            try {
+              pt = projection.containerPointFromCoords(itemLatLng);
+            } catch(e) {
+              return;
+            }
+            if(!pt) return;
+            
             const c = { x: size.x/2, y: size.y/2 };
             const dx = pt.x - c.x;
             const dy = pt.y - c.y;
             
-            // Intersection with rect [pad, pad, size.x-pad, size.y-pad]
             let t = Infinity;
             if (dx < 0) t = Math.min(t, (pad - c.x) / dx);
             if (dx > 0) t = Math.min(t, (size.x - pad - c.x) / dx);
@@ -99,7 +95,6 @@ function OutOfBoundsOverlay({ members, meetings, showMembers, showMeetings }) {
             const ix = c.x + t * dx;
             const iy = c.y + t * dy;
             
-            // Calculate angle for arrow (pointing outwards from center to marker)
             const angle = Math.atan2(dy, dx) * 180 / Math.PI;
 
             newMarkers.push({
@@ -118,8 +113,8 @@ function OutOfBoundsOverlay({ members, meetings, showMembers, showMeetings }) {
       if (showMembers) processItems(members, 'member');
       if (showMeetings) processItems(meetings, 'meeting');
 
-      // Cluster markers that are close to each other on the screen border
-      const CLUSTER_RADIUS = 60; // pixels
+      // Cluster
+      const CLUSTER_RADIUS = 60;
       const clusters = [];
 
       newMarkers.sort((a,b) => a.distRaw - b.distRaw);
@@ -130,8 +125,6 @@ function OutOfBoundsOverlay({ members, meetings, showMembers, showMeetings }) {
           const dist = Math.hypot(cluster.x - marker.x, cluster.y - marker.y);
           if (dist < CLUSTER_RADIUS) {
             cluster.items.push(marker);
-            // Optional: Recalculate average position and angle
-            // For simplicity, we just keep the position of the closest marker (which is the first one since we sorted)
             addedToCluster = true;
             break;
           }
@@ -152,16 +145,17 @@ function OutOfBoundsOverlay({ members, meetings, showMembers, showMeetings }) {
       setMarkers(clusters);
     };
 
-    map.on('move', updateMarkers);
-    map.on('zoom', updateMarkers);
-    map.on('resize', updateMarkers);
+    window.kakao.maps.event.addListener(map, 'center_changed', updateMarkers);
+    window.kakao.maps.event.addListener(map, 'zoom_changed', updateMarkers);
+    window.addEventListener('resize', updateMarkers);
     
+    // initial update
     setTimeout(updateMarkers, 100);
 
     return () => {
-      map.off('move', updateMarkers);
-      map.off('zoom', updateMarkers);
-      map.off('resize', updateMarkers);
+      window.kakao.maps.event.removeListener(map, 'center_changed', updateMarkers);
+      window.kakao.maps.event.removeListener(map, 'zoom_changed', updateMarkers);
+      window.removeEventListener('resize', updateMarkers);
     };
   }, [map, members, meetings, showMembers, showMeetings]);
 
@@ -218,10 +212,11 @@ export default function BusinessMap() {
   const [showMeetings, setShowMeetings] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [mapCenter, setMapCenter] = useState([37.503, 127.040]);
-  const [mapZoom, setMapZoom] = useState(13);
+  const [mapCenter, setMapCenter] = useState({ lat: 37.503, lng: 127.040 });
+  const [mapZoom, setMapZoom] = useState(6); // 1-14, 6 is roughly city-level
   const [searchedLocation, setSearchedLocation] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [activeMarker, setActiveMarker] = useState(null);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -232,8 +227,8 @@ export default function BusinessMap() {
     );
     if (foundMember) {
       setShowMembers(true);
-      setMapCenter([foundMember.lat, foundMember.lng]);
-      setMapZoom(16);
+      setMapCenter({ lat: foundMember.lat, lng: foundMember.lng });
+      setMapZoom(3);
       setSearchedLocation(null);
       return;
     }
@@ -244,32 +239,30 @@ export default function BusinessMap() {
     );
     if (foundMeeting) {
       setShowMeetings(true);
-      setMapCenter([foundMeeting.lat, foundMeeting.lng]);
-      setMapZoom(16);
+      setMapCenter({ lat: foundMeeting.lat, lng: foundMeeting.lng });
+      setMapZoom(3);
       setSearchedLocation(null);
       return;
     }
 
-    // 3. Fallback to OpenStreetMap Nominatim API
+    // 3. Kakao Local Search API
     setIsSearching(true);
-    try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
-      const data = await response.json();
-      if (data && data.length > 0) {
-        const result = data[0];
-        const lat = parseFloat(result.lat);
-        const lon = parseFloat(result.lon);
-        setSearchedLocation({ lat, lng: lon, name: result.display_name });
-        setMapCenter([lat, lon]);
-        setMapZoom(16);
-      } else {
-        alert('검색 결과가 없습니다.');
-      }
-    } catch (error) {
-      console.error('Map search error:', error);
-      alert('위치 검색 중 오류가 발생했습니다.');
-    } finally {
+    if (window.kakao && window.kakao.maps && window.kakao.maps.services) {
+      const ps = new window.kakao.maps.services.Places();
+      ps.keywordSearch(searchQuery, (data, status) => {
+        setIsSearching(false);
+        if (status === window.kakao.maps.services.Status.OK) {
+          const result = data[0];
+          setSearchedLocation({ lat: parseFloat(result.y), lng: parseFloat(result.x), name: result.place_name });
+          setMapCenter({ lat: parseFloat(result.y), lng: parseFloat(result.x) });
+          setMapZoom(3);
+        } else {
+          alert('검색 결과가 없습니다.');
+        }
+      });
+    } else {
       setIsSearching(false);
+      alert('카카오맵 서비스를 불러오지 못했습니다.');
     }
   };
 
@@ -278,10 +271,11 @@ export default function BusinessMap() {
   };
 
   const resetMap = () => {
-    setMapCenter([37.503, 127.040]);
-    setMapZoom(13);
+    setMapCenter({ lat: 37.503, lng: 127.040 });
+    setMapZoom(6);
     setSearchedLocation(null);
     setSearchQuery('');
+    setActiveMarker(null);
   };
 
   const filteredMembers = members.filter(member => {
@@ -328,7 +322,7 @@ export default function BusinessMap() {
             <div style={{ flex: 1, position: 'relative' }}>
               <input 
                 type="text" 
-                placeholder="멤버 이름, 회사명, 지명 검색..." 
+                placeholder="카카오 장소 검색, 혹은 멤버 상호명 검색..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -371,62 +365,78 @@ export default function BusinessMap() {
       </div>
 
       {/* Map Container */}
-      <div style={{ flex: 1, overflow: 'hidden', position: 'relative', zIndex: 1 }}>
-        <MapContainer 
-          center={mapCenter} 
-          zoom={mapZoom} 
+      <div style={{ flex: 1, overflow: 'hidden', position: 'relative', zIndex: 1, background: '#e5e3df' }}>
+        <Map
+          center={mapCenter}
+          level={mapZoom}
           style={{ width: '100%', height: '100%' }}
+          onClick={() => setActiveMarker(null)} // Close popups on map click
         >
-          <MapController center={mapCenter} zoom={mapZoom} />
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          
           {/* Member Pins */}
-          {showMembers && filteredMembers.map(member => (
-            <Marker key={`member-${member.id}`} position={[member.lat || 37.5, member.lng || 127.0]} icon={getCategoryIcon(member)}>
-              <Popup>
-                <div style={{ textAlign: 'center', minWidth: '150px' }}>
-                  <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#000' }}>{member.name} 대표</div>
-                  <div style={{ color: '#666', fontSize: '12px', margin: '4px 0' }}>{member.company} ({member.category})</div>
-                  <div style={{ color: '#888', fontSize: '11px', marginTop: '8px' }}>{member.address}</div>
-                  <button style={{ marginTop: '10px', width: '100%', padding: '6px', background: '#3742fa', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>
-                    프로필 보기
-                  </button>
+          {showMembers && filteredMembers.map(member => {
+            const { color, icon } = getCategoryColorAndIcon(member);
+            return (
+              <CustomOverlayMap key={`member-${member.id}`} position={{ lat: member.lat || 37.5, lng: member.lng || 127.0 }} yAnchor={1} zIndex={activeMarker === member.id ? 100 : 1}>
+                <div style={{ position: 'relative' }}>
+                  <div onClick={(e) => { e.stopPropagation(); setActiveMarker(member.id); }} style={{ backgroundColor: color, width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid white', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', cursor: 'pointer', marginBottom: '8px' }}>
+                    <div style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>{icon}</div>
+                  </div>
+                  {activeMarker === member.id && (
+                    <div style={{ position: 'absolute', bottom: '60px', left: '50%', transform: 'translateX(-50%)', background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', width: '220px', zIndex: 1000, pointerEvents: 'auto' }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#000', marginBottom: '2px' }}>{member.name} 대표</div>
+                        <div style={{ color: '#555', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>{member.company} <span style={{ color: color }}>({member.category})</span></div>
+                        <div style={{ color: '#888', fontSize: '12px', marginBottom: '12px', wordBreak: 'keep-all', lineHeight: '1.4' }}>{member.address}</div>
+                        <button style={{ width: '100%', padding: '8px', background: color, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', transition: 'opacity 0.2s' }} onMouseOver={(e) => e.target.style.opacity=0.8} onMouseOut={(e) => e.target.style.opacity=1}>프로필 보기</button>
+                        <button onClick={(e) => { e.stopPropagation(); setActiveMarker(null); }} style={{ position: 'absolute', top: '8px', right: '8px', border: 'none', background: 'rgba(0,0,0,0.05)', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '14px', color: '#666' }}>&times;</button>
+                      </div>
+                      <div style={{ position: 'absolute', bottom: '-8px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '10px solid transparent', borderRight: '10px solid transparent', borderTop: '10px solid white' }}></div>
+                    </div>
+                  )}
                 </div>
-              </Popup>
-            </Marker>
-          ))}
+              </CustomOverlayMap>
+            );
+          })}
 
           {/* Meeting Pins */}
           {showMeetings && meetings.map(meeting => (
-            <Marker key={`meeting-${meeting.id}`} position={[meeting.lat || 37.5, meeting.lng || 127.0]} icon={meetingIcon}>
-              <Popup>
-                <div style={{ textAlign: 'center', minWidth: '150px' }}>
-                  <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#ff4757' }}>원투원 미팅</div>
-                  <div style={{ color: '#000', fontSize: '13px', margin: '6px 0', fontWeight: 'bold' }}>{meeting.title}</div>
-                  <div style={{ color: '#666', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                    <Calendar size={12} /> {meeting.date}
-                  </div>
-                  <div style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                    <MapPin size={12} /> {meeting.locationName}
-                  </div>
+            <CustomOverlayMap key={`meeting-${meeting.id}`} position={{ lat: meeting.lat || 37.5, lng: meeting.lng || 127.0 }} yAnchor={1} zIndex={activeMarker === `mtg-${meeting.id}` ? 100 : 1}>
+              <div style={{ position: 'relative' }}>
+                <div onClick={(e) => { e.stopPropagation(); setActiveMarker(`mtg-${meeting.id}`); }} style={{ backgroundColor: '#ff4757', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid white', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', cursor: 'pointer', marginBottom: '8px' }}>
+                  <div style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>🤝</div>
                 </div>
-              </Popup>
-            </Marker>
+                {activeMarker === `mtg-${meeting.id}` && (
+                  <div style={{ position: 'absolute', bottom: '60px', left: '50%', transform: 'translateX(-50%)', background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', width: '220px', zIndex: 1000, pointerEvents: 'auto' }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#ff4757', marginBottom: '4px' }}>원투원 미팅</div>
+                      <div style={{ color: '#000', fontSize: '14px', margin: '8px 0', fontWeight: 'bold' }}>{meeting.title}</div>
+                      <div style={{ color: '#666', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '4px' }}><Calendar size={14} /> {meeting.date}</div>
+                      <div style={{ color: '#666', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><MapPin size={14} /> {meeting.locationName}</div>
+                      <button onClick={(e) => { e.stopPropagation(); setActiveMarker(null); }} style={{ position: 'absolute', top: '8px', right: '8px', border: 'none', background: 'rgba(0,0,0,0.05)', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '14px', color: '#666' }}>&times;</button>
+                    </div>
+                    <div style={{ position: 'absolute', bottom: '-8px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '10px solid transparent', borderRight: '10px solid transparent', borderTop: '10px solid white' }}></div>
+                  </div>
+                )}
+              </div>
+            </CustomOverlayMap>
           ))}
 
           {/* Search Result Pin */}
           {searchedLocation && (
-            <Marker position={[searchedLocation.lat, searchedLocation.lng]} icon={searchIcon}>
-              <Popup>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#2ed573' }}>검색 결과</div>
-                  <div style={{ color: '#666', fontSize: '12px', marginTop: '4px' }}>{searchedLocation.name}</div>
+            <CustomOverlayMap position={{ lat: searchedLocation.lat, lng: searchedLocation.lng }} yAnchor={1} zIndex={100}>
+              <div style={{ position: 'relative' }}>
+                <div style={{ backgroundColor: '#2ed573', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid white', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', cursor: 'pointer', marginBottom: '8px' }}>
+                  <div style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>📍</div>
                 </div>
-              </Popup>
-            </Marker>
+                <div style={{ position: 'absolute', bottom: '60px', left: '50%', transform: 'translateX(-50%)', background: 'white', padding: '12px 16px', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', minWidth: '160px', zIndex: 1000, pointerEvents: 'auto' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#2ed573', marginBottom: '4px' }}>검색 결과</div>
+                    <div style={{ color: '#444', fontSize: '13px', wordBreak: 'keep-all', fontWeight: '500' }}>{searchedLocation.name}</div>
+                  </div>
+                  <div style={{ position: 'absolute', bottom: '-8px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '10px solid transparent', borderRight: '10px solid transparent', borderTop: '10px solid white' }}></div>
+                </div>
+              </div>
+            </CustomOverlayMap>
           )}
 
           <OutOfBoundsOverlay 
@@ -435,7 +445,7 @@ export default function BusinessMap() {
             showMembers={showMembers} 
             showMeetings={showMeetings} 
           />
-        </MapContainer>
+        </Map>
       </div>
     </div>
   );
