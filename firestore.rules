@@ -1,0 +1,15 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // users 컬렉션에 대한 규칙
+    match /users/{userId} {
+      // 사용자가 로그인되어 있고, 자신의 문서(uid가 일치)에만 읽기/쓰기 허용
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // (임시) 개발 중 테스트를 위해 다른 모든 데이터는 로그인한 사용자에게만 허용
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
