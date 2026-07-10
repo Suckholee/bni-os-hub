@@ -39,6 +39,21 @@ const getCategoryIcon = (member) => {
 const meetingIcon = createCustomIcon('#ff4757', '🤝');
 const searchIcon = createCustomIcon('#2ed573', '📍');
 
+const FILTER_CATEGORIES = [
+  { id: 'all', label: '전체', icon: '🌐' },
+  { id: '음식', label: '음식/식품', icon: '🍽️', keywords: ['음식', '요식', '식품'] },
+  { id: '건축', label: '건축/인테리어', icon: '🏗️', keywords: ['건축', '인테리어', '조명'] },
+  { id: '유통', label: '유통', icon: '📦', keywords: ['유통'] },
+  { id: '의료', label: '건강/의료', icon: '⚕️', keywords: ['건강', '의료', '병원', '안과'] },
+  { id: '교육', label: '교육/코칭', icon: '🎓', keywords: ['교육', '코칭'] },
+  { id: '부동산', label: '부동산', icon: '🏠', keywords: ['부동산'] },
+  { id: '법률', label: '법률/세무', icon: '⚖️', keywords: ['법률', '세무', '노무', '회계', '변호사'] },
+  { id: '금융', label: '금융/보험', icon: '💰', keywords: ['금융', '보험'] },
+  { id: 'IT', label: 'IT/개발', icon: '💻', keywords: ['it', '소프트웨어', '개발', '컴퓨터', '마케팅'] },
+  { id: '스포츠', label: '스포츠', icon: '⛳', keywords: ['스포츠', '골프', '레져'] },
+  { id: '꽃', label: '플라워', icon: '🌸', keywords: ['꽃', '플라워'] },
+];
+
 function MapController({ center, zoom }) {
   const map = useMap();
   useEffect(() => {
@@ -201,6 +216,7 @@ export default function BusinessMap() {
 
   const [showMembers, setShowMembers] = useState(true);
   const [showMeetings, setShowMeetings] = useState(true);
+  const [activeFilter, setActiveFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [mapCenter, setMapCenter] = useState([37.503, 127.040]);
   const [mapZoom, setMapZoom] = useState(13);
@@ -268,6 +284,17 @@ export default function BusinessMap() {
     setSearchQuery('');
   };
 
+  const filteredMembers = members.filter(member => {
+    if (activeFilter === 'all') return true;
+    const catDef = FILTER_CATEGORIES.find(c => c.id === activeFilter);
+    if (!catDef) return true;
+    
+    const category = (member.category || '').toLowerCase();
+    const tag = (member.tag || '').toLowerCase();
+    
+    return catDef.keywords.some(kw => category.includes(kw) || tag.includes(kw));
+  });
+
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Header & Controls */}
@@ -275,6 +302,27 @@ export default function BusinessMap() {
         <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '16px' }}>비즈니스 맵 🗺️</h2>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* Filters Row */}
+          <div className="hide-scrollbar" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {FILTER_CATEGORIES.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => setActiveFilter(cat.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '4px',
+                  padding: '6px 12px', borderRadius: '20px',
+                  background: activeFilter === cat.id ? 'rgba(55, 66, 250, 0.8)' : 'rgba(255,255,255,0.05)',
+                  border: `1px solid ${activeFilter === cat.id ? '#3742fa' : 'rgba(255,255,255,0.1)'}`,
+                  color: activeFilter === cat.id ? '#fff' : 'rgba(255,255,255,0.7)',
+                  fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap',
+                  transition: 'all 0.2s', flexShrink: 0
+                }}
+              >
+                <span>{cat.icon}</span> {cat.label}
+              </button>
+            ))}
+          </div>
+
           {/* Search Bar */}
           <div style={{ display: 'flex', gap: '8px' }}>
             <div style={{ flex: 1, position: 'relative' }}>
@@ -336,7 +384,7 @@ export default function BusinessMap() {
           />
           
           {/* Member Pins */}
-          {showMembers && members.map(member => (
+          {showMembers && filteredMembers.map(member => (
             <Marker key={`member-${member.id}`} position={[member.lat || 37.5, member.lng || 127.0]} icon={getCategoryIcon(member)}>
               <Popup>
                 <div style={{ textAlign: 'center', minWidth: '150px' }}>
@@ -382,7 +430,7 @@ export default function BusinessMap() {
           )}
 
           <OutOfBoundsOverlay 
-            members={members} 
+            members={filteredMembers} 
             meetings={meetings} 
             showMembers={showMembers} 
             showMeetings={showMeetings} 
