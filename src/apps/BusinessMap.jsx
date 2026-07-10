@@ -31,6 +31,143 @@ function MapController({ center, zoom }) {
   return null;
 }
 
+function OutOfBoundsOverlay({ members, meetings, showMembers, showMeetings }) {
+  const map = useMap();
+  const [markers, setMarkers] = useState([]);
+
+  useEffect(() => {
+    const updateMarkers = () => {
+      const bounds = map.getBounds();
+      const center = map.getCenter();
+      const size = map.getSize();
+      const pad = 30; // padding from edge
+      
+      const newMarkers = [];
+      const processItems = (items, type) => {
+        items.forEach(item => {
+          if (!item.lat || !item.lng) return;
+          const latlng = L.latLng(item.lat, item.lng);
+          if (!bounds.contains(latlng)) {
+            const dist = center.distanceTo(latlng);
+            const distStr = dist > 1000 ? (dist/1000).toFixed(1) + 'km' : Math.round(dist) + 'm';
+            
+            const pt = map.latLngToContainerPoint(latlng);
+            const c = { x: size.x/2, y: size.y/2 };
+            const dx = pt.x - c.x;
+            const dy = pt.y - c.y;
+            
+            // Intersection with rect [pad, pad, size.x-pad, size.y-pad]
+            let t = Infinity;
+            if (dx < 0) t = Math.min(t, (pad - c.x) / dx);
+            if (dx > 0) t = Math.min(t, (size.x - pad - c.x) / dx);
+            if (dy < 0) t = Math.min(t, (pad - c.y) / dy);
+            if (dy > 0) t = Math.min(t, (size.y - pad - c.y) / dy);
+            
+            const ix = c.x + t * dx;
+            const iy = c.y + t * dy;
+            
+            // Calculate angle for arrow (pointing outwards from center to marker)
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+            newMarkers.push({
+              id: item.id,
+              type,
+              distStr,
+              distRaw: dist,
+              x: ix,
+              y: iy,
+              angle
+            });
+          }
+        });
+      };
+
+      if (showMembers) processItems(members, 'member');
+      if (showMeetings) processItems(meetings, 'meeting');
+
+      // Cluster markers that are close to each other on the screen border
+      const CLUSTER_RADIUS = 60; // pixels
+      const clusters = [];
+
+      newMarkers.sort((a,b) => a.distRaw - b.distRaw);
+
+      newMarkers.forEach(marker => {
+        let addedToCluster = false;
+        for (let cluster of clusters) {
+          const dist = Math.hypot(cluster.x - marker.x, cluster.y - marker.y);
+          if (dist < CLUSTER_RADIUS) {
+            cluster.items.push(marker);
+            // Optional: Recalculate average position and angle
+            // For simplicity, we just keep the position of the closest marker (which is the first one since we sorted)
+            addedToCluster = true;
+            break;
+          }
+        }
+        if (!addedToCluster) {
+          clusters.push({
+            id: `cluster-${marker.id}`,
+            x: marker.x,
+            y: marker.y,
+            angle: marker.angle,
+            distStr: marker.distStr,
+            type: marker.type,
+            items: [marker]
+          });
+        }
+      });
+
+      setMarkers(clusters);
+    };
+
+    map.on('move', updateMarkers);
+    map.on('zoom', updateMarkers);
+    map.on('resize', updateMarkers);
+    
+    setTimeout(updateMarkers, 100);
+
+    return () => {
+      map.off('move', updateMarkers);
+      map.off('zoom', updateMarkers);
+      map.off('resize', updateMarkers);
+    };
+  }, [map, members, meetings, showMembers, showMeetings]);
+
+  if (markers.length === 0) return null;
+
+  return (
+    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1000, overflow: 'hidden' }}>
+      {markers.map(m => {
+        const count = m.items.length;
+        const isCluster = count > 1;
+        return (
+          <div key={m.id} style={{
+            position: 'absolute',
+            left: m.x,
+            top: m.y,
+            transform: 'translate(-50%, -50%)',
+            background: 'rgba(0,0,0,0.7)',
+            color: 'white',
+            padding: '4px 8px',
+            borderRadius: '12px',
+            fontSize: '11px',
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            border: `1px solid ${m.type === 'member' ? '#3742fa' : '#ff4757'}`,
+            backdropFilter: 'blur(4px)',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+            whiteSpace: 'nowrap'
+          }}>
+            <div style={{ transform: `rotate(${m.angle}deg)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>➤</div>
+            {isCluster ? `+${count}명 (${m.distStr} 외)` : m.distStr}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function BusinessMap() {
   const [members, setMembers] = useState([]);
   const [meetings, setMeetings] = useState([]);
@@ -225,6 +362,13 @@ export default function BusinessMap() {
               </Popup>
             </Marker>
           )}
+
+          <OutOfBoundsOverlay 
+            members={members} 
+            meetings={meetings} 
+            showMembers={showMembers} 
+            showMeetings={showMeetings} 
+          />
         </MapContainer>
       </div>
     </div>
