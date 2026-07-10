@@ -48,10 +48,28 @@ function getDistance(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-function OutOfBoundsOverlay({ members, meetings, showMembers, showMeetings }) {
+function OutOfBoundsOverlay({ members, meetings, showMembers, showMeetings, onSelectLocation }) {
   const map = useMap();
   const [markers, setMarkers] = useState([]);
   const [activeCluster, setActiveCluster] = useState(null);
+
+  const handleItemClick = (item, type) => {
+    let target = null;
+    let markerId = null;
+    
+    if (type === 'member') {
+      const member = members.find(mem => mem.id === item.id);
+      if (member) { target = member; markerId = member.id; }
+    } else {
+      const meeting = meetings.find(mtg => mtg.id === item.id);
+      if (meeting) { target = meeting; markerId = `mtg-${meeting.id}`; }
+    }
+
+    if (target && target.lat && target.lng) {
+      if (onSelectLocation) onSelectLocation({ lat: target.lat, lng: target.lng }, markerId);
+      setActiveCluster(null);
+    }
+  };
 
   useEffect(() => {
     if (!map || !window.kakao) return;
@@ -244,7 +262,13 @@ function OutOfBoundsOverlay({ members, meetings, showMembers, showMeetings }) {
                   const member = members.find(mem => mem.id === item.id);
                   if (!member) return null;
                   return (
-                    <div key={idx} style={{ padding: '16px', background: '#f8f9fa', borderRadius: '16px', border: '1px solid #eee' }}>
+                    <div 
+                      key={idx} 
+                      onClick={() => handleItemClick(item, 'member')}
+                      style={{ padding: '16px', background: '#f8f9fa', borderRadius: '16px', border: '1px solid #eee', cursor: 'pointer', transition: 'background 0.2s' }}
+                      onMouseOver={(e)=>e.currentTarget.style.background='#f0f0f0'}
+                      onMouseOut={(e)=>e.currentTarget.style.background='#f8f9fa'}
+                    >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
                         <div style={{ fontWeight: 'bold', color: '#000', fontSize: '15px' }}>{member.name} 대표</div>
                         <div style={{ fontSize: '12px', color: '#888', background: '#eee', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>{item.distStr}</div>
@@ -257,7 +281,13 @@ function OutOfBoundsOverlay({ members, meetings, showMembers, showMeetings }) {
                   const meeting = meetings.find(mtg => mtg.id === item.id);
                   if (!meeting) return null;
                   return (
-                    <div key={idx} style={{ padding: '16px', background: '#fff0f2', borderRadius: '16px', border: '1px solid #ffe3e6' }}>
+                    <div 
+                      key={idx} 
+                      onClick={() => handleItemClick(item, 'meeting')}
+                      style={{ padding: '16px', background: '#fff0f2', borderRadius: '16px', border: '1px solid #ffe3e6', cursor: 'pointer', transition: 'background 0.2s' }}
+                      onMouseOver={(e)=>e.currentTarget.style.background='#ffe3e6'}
+                      onMouseOut={(e)=>e.currentTarget.style.background='#fff0f2'}
+                    >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
                         <div style={{ fontWeight: 'bold', color: '#ff4757', fontSize: '15px' }}>{meeting.title}</div>
                         <div style={{ fontSize: '12px', color: '#ff4757', background: '#ffe3e6', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>{item.distStr}</div>
@@ -361,6 +391,56 @@ export default function BusinessMap() {
     setSearchedLocation(null);
     setSearchQuery('');
     setActiveMarker(null);
+  };
+
+  const handleSelectLocation = (coords, markerId) => {
+    setMapCenter(coords);
+    setMapZoom(3); // Zoom in closer
+    setSearchedLocation(null);
+    setActiveMarker(markerId);
+  };
+
+  const handleNavi = (name, lat, lng) => {
+    if (!window.Kakao || !window.Kakao.isInitialized()) {
+      alert('카카오 API가 준비되지 않았습니다.');
+      return;
+    }
+    window.Kakao.Navi.start({
+      name: name || '도착지',
+      x: Number(lng),
+      y: Number(lat),
+      coordType: 'wgs84'
+    });
+  };
+
+  const handleShare = (title, desc, address, url) => {
+    if (!window.Kakao || !window.Kakao.isInitialized()) {
+      alert('카카오 API가 준비되지 않았습니다.');
+      return;
+    }
+    window.Kakao.Share.sendDefault({
+      objectType: 'location',
+      address: address || '위치 정보 없음',
+      addressTitle: title,
+      content: {
+        title: title,
+        description: desc,
+        imageUrl: 'https://cdn-icons-png.flaticon.com/512/854/854878.png', // Default map icon
+        link: {
+          mobileWebUrl: url,
+          webUrl: url
+        }
+      },
+      buttons: [
+        {
+          title: '지도에서 열기',
+          link: {
+            mobileWebUrl: url,
+            webUrl: url
+          }
+        }
+      ]
+    });
   };
 
   const filteredMembers = members.filter(member => {
@@ -477,7 +557,11 @@ export default function BusinessMap() {
                           <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#000', marginBottom: '2px' }}>{member.name} 대표</div>
                           <div style={{ color: '#555', fontSize: '13px', marginBottom: '8px', fontWeight: '500' }}>{member.company} <span style={{ color: color }}>({member.category})</span></div>
                           <div style={{ color: '#888', fontSize: '12px', marginBottom: '12px', wordBreak: 'keep-all', lineHeight: '1.4' }}>{member.address}</div>
-                          <button style={{ width: '100%', padding: '8px', background: color, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', transition: 'opacity 0.2s' }} onMouseOver={(e) => e.target.style.opacity=0.8} onMouseOut={(e) => e.target.style.opacity=1}>프로필 보기</button>
+                          <div style={{ display: 'flex', gap: '6px', marginTop: '12px' }}>
+                            <button onClick={(e) => { e.stopPropagation(); handleNavi(member.company || member.name, member.lat, member.lng); }} style={{ flex: 1, padding: '8px 4px', background: '#FFEB00', color: '#3c1e1e', borderRadius: '6px', border: 'none', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>🚗 내비</button>
+                            <button onClick={(e) => { e.stopPropagation(); handleShare(member.name + ' 대표', member.company || member.category, member.address, `https://bni-os-hub.vercel.app`); }} style={{ flex: 1, padding: '8px 4px', background: '#FEE500', color: '#3c1e1e', borderRadius: '6px', border: 'none', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>💬 공유</button>
+                            <button style={{ flex: 1, padding: '8px 4px', background: color, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', transition: 'opacity 0.2s' }} onMouseOver={(e) => e.target.style.opacity=0.8} onMouseOut={(e) => e.target.style.opacity=1}>프로필</button>
+                          </div>
                           <button onClick={(e) => { e.stopPropagation(); setActiveMarker(null); }} style={{ position: 'absolute', top: '8px', right: '8px', border: 'none', background: 'rgba(0,0,0,0.05)', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '14px', color: '#666' }}>&times;</button>
                         </div>
                         <div style={{ position: 'absolute', bottom: '-8px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '10px solid transparent', borderRight: '10px solid transparent', borderTop: '10px solid white' }}></div>
@@ -502,6 +586,10 @@ export default function BusinessMap() {
                         <div style={{ color: '#000', fontSize: '14px', margin: '8px 0', fontWeight: 'bold' }}>{meeting.title}</div>
                         <div style={{ color: '#666', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '4px' }}><Calendar size={14} /> {meeting.date}</div>
                         <div style={{ color: '#666', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><MapPin size={14} /> {meeting.locationName}</div>
+                        <div style={{ display: 'flex', gap: '6px', marginTop: '12px' }}>
+                          <button onClick={(e) => { e.stopPropagation(); handleNavi(meeting.locationName || meeting.title, meeting.lat, meeting.lng); }} style={{ flex: 1, padding: '8px 4px', background: '#FFEB00', color: '#3c1e1e', borderRadius: '6px', border: 'none', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>🚗 내비</button>
+                          <button onClick={(e) => { e.stopPropagation(); handleShare('원투원 미팅', meeting.title, meeting.locationName, `https://bni-os-hub.vercel.app`); }} style={{ flex: 1, padding: '8px 4px', background: '#FEE500', color: '#3c1e1e', borderRadius: '6px', border: 'none', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>💬 공유</button>
+                        </div>
                         <button onClick={(e) => { e.stopPropagation(); setActiveMarker(null); }} style={{ position: 'absolute', top: '8px', right: '8px', border: 'none', background: 'rgba(0,0,0,0.05)', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '14px', color: '#666' }}>&times;</button>
                       </div>
                       <div style={{ position: 'absolute', bottom: '-8px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '10px solid transparent', borderRight: '10px solid transparent', borderTop: '10px solid white' }}></div>
@@ -534,6 +622,7 @@ export default function BusinessMap() {
               meetings={meetings} 
               showMembers={showMembers} 
               showMeetings={showMeetings} 
+              onSelectLocation={handleSelectLocation}
             />
           </Map>
         )}
