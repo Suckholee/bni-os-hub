@@ -552,7 +552,7 @@ export default function BusinessMap() {
                       <div style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>{icon}</div>
                     </div>
                     {activeMarker === member.id && (
-                      <div style={{ position: 'absolute', bottom: '60px', left: '50%', transform: 'translateX(-50%)', background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', width: '260px', zIndex: 1000, pointerEvents: 'auto' }}>
+                      <div style={{ position: 'absolute', bottom: '60px', left: '50%', transform: 'translateX(-50%)', background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', width: '260px', zIndex: 1000, pointerEvents: 'auto', whiteSpace: 'normal' }}>
                         <div style={{ textAlign: 'center' }}>
                           <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#000', marginBottom: '4px' }}>{member.name} 대표</div>
                           <div style={{ color: '#555', fontSize: '13px', marginBottom: '8px', fontWeight: '500', wordBreak: 'break-word', lineHeight: '1.4' }}>{member.company} <span style={{ color: color }}>({member.category})</span></div>
@@ -580,7 +580,7 @@ export default function BusinessMap() {
                     <div style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>🤝</div>
                   </div>
                   {activeMarker === `mtg-${meeting.id}` && (
-                    <div style={{ position: 'absolute', bottom: '60px', left: '50%', transform: 'translateX(-50%)', background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', width: '260px', zIndex: 1000, pointerEvents: 'auto' }}>
+                    <div style={{ position: 'absolute', bottom: '60px', left: '50%', transform: 'translateX(-50%)', background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', width: '260px', zIndex: 1000, pointerEvents: 'auto', whiteSpace: 'normal' }}>
                       <div style={{ textAlign: 'center' }}>
                         <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#ff4757', marginBottom: '4px' }}>원투원 미팅</div>
                         <div style={{ color: '#000', fontSize: '14px', margin: '8px 0', fontWeight: 'bold', wordBreak: 'break-word', lineHeight: '1.4' }}>{meeting.title}</div>
@@ -606,7 +606,7 @@ export default function BusinessMap() {
                   <div style={{ backgroundColor: '#2ed573', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid white', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', cursor: 'pointer', marginBottom: '8px' }}>
                     <div style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>📍</div>
                   </div>
-                  <div style={{ position: 'absolute', bottom: '60px', left: '50%', transform: 'translateX(-50%)', background: 'white', padding: '12px 16px', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', minWidth: '160px', zIndex: 1000, pointerEvents: 'auto' }}>
+                  <div style={{ position: 'absolute', bottom: '60px', left: '50%', transform: 'translateX(-50%)', background: 'white', padding: '12px 16px', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', minWidth: '160px', zIndex: 1000, pointerEvents: 'auto', whiteSpace: 'normal' }}>
                     <div style={{ textAlign: 'center' }}>
                       <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#2ed573', marginBottom: '4px' }}>검색 결과</div>
                       <div style={{ color: '#444', fontSize: '13px', wordBreak: 'break-word', fontWeight: '500', lineHeight: '1.4' }}>{searchedLocation.name}</div>
