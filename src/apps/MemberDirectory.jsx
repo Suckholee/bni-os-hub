@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Phone, Mail, Building2, Camera, Loader2, Save } from 'lucide-react';
-import { subscribeToMembers } from '../services/memberService';
+import { Search, Phone, Mail, Building2, Camera, Loader2, Save, X, Calendar, MapPin, MessageSquare } from 'lucide-react';
+import { subscribeToMembers, createOneToOneRequest } from '../services/memberService';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function MemberDirectory() {
   const [activeTab, setActiveTab] = useState('list');
@@ -10,6 +11,9 @@ export default function MemberDirectory() {
   });
 
   const [members, setMembers] = useState([]);
+  const [requestModal, setRequestModal] = useState({ isOpen: false, member: null, date: '', time: '', locationType: '내 사무실', message: '' });
+  const { currentUser } = useAuth();
+  const myName = currentUser?.email?.split('@')[0] || 'Unknown';
 
   useEffect(() => {
     const unsubscribe = subscribeToMembers((data) => {
@@ -83,6 +87,54 @@ export default function MemberDirectory() {
     setActiveTab('list');
   };
 
+  const handleRequestSubmit = async () => {
+    if (!requestModal.date || !requestModal.time) {
+      alert("희망 날짜와 시간을 선택해주세요.");
+      return;
+    }
+    try {
+      await createOneToOneRequest({
+        senderName: myName,
+        receiverName: requestModal.member.name,
+        proposedDate: requestModal.date,
+        proposedTime: requestModal.time,
+        locationType: requestModal.locationType,
+        message: requestModal.message,
+        receiverLat: requestModal.member.lat || 37.5112,
+        receiverLng: requestModal.member.lng || 127.0458,
+      });
+
+      if (window.Kakao && window.Kakao.Share) {
+        window.Kakao.Share.sendDefault({
+          objectType: 'feed',
+          content: {
+            title: `[BNI 타이탄] 원투원 미팅 요청 🤝`,
+            description: `${myName} 대표님이 ${requestModal.member.name} 대표님께 원투원 미팅을 요청하셨습니다. 앱에 접속하여 일정을 확인해주세요!`,
+            imageUrl: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&q=80&w=800',
+            link: {
+              mobileWebUrl: window.location.href,
+              webUrl: window.location.href,
+            },
+          },
+          buttons: [
+            {
+              title: '요청 확인하기',
+              link: {
+                mobileWebUrl: window.location.href,
+                webUrl: window.location.href,
+              },
+            },
+          ],
+        });
+      }
+
+      alert("원투원 요청이 전송되었습니다!");
+      setRequestModal({ ...requestModal, isOpen: false });
+    } catch (e) {
+      alert("요청 전송 중 오류가 발생했습니다.");
+    }
+  };
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -127,7 +179,10 @@ export default function MemberDirectory() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Phone size={14} color="rgba(255,255,255,0.5)" /> {member.phone}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Mail size={14} color="rgba(255,255,255,0.5)" /> {member.email}</div>
                   </div>
-                  <button style={{ marginTop: '16px', width: '100%', padding: '8px', background: 'transparent', border: `1px solid ${member.color}`, color: member.color, borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                  <button 
+                    onClick={() => setRequestModal({ isOpen: true, member, date: '', time: '', locationType: '내 사무실', message: '' })}
+                    style={{ marginTop: '16px', width: '100%', padding: '8px', background: 'transparent', border: `1px solid ${member.color || '#3742fa'}`, color: member.color || '#3742fa', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                  >
                     원투원 요청하기
                   </button>
                 </div>
@@ -212,6 +267,66 @@ export default function MemberDirectory() {
                 프로필 저장 및 공개하기
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 1-to-1 Request Modal */}
+      {requestModal.isOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          <div style={{ background: '#1e1e2d', width: '400px', borderRadius: '12px', padding: '24px', position: 'relative', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <button onClick={() => setRequestModal({ ...requestModal, isOpen: false })} style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }}>
+              <X size={20} />
+            </button>
+            
+            <h3 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px', color: '#fff' }}>원투원 미팅 요청 🤝</h3>
+            
+            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '16px', borderRadius: '8px', marginBottom: '20px' }}>
+              <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)', marginBottom: '4px' }}>받는 사람</div>
+              <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#fff' }}>{requestModal.member?.name} 대표</div>
+              <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>{requestModal.member?.company}</div>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'rgba(255,255,255,0.7)', marginBottom: '8px' }}>
+                <Calendar size={16} /> 희망 날짜 및 시간
+              </label>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <input type="date" value={requestModal.date} onChange={e => setRequestModal({...requestModal, date: e.target.value})} style={{ flex: 1, padding: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', outline: 'none' }} />
+                <input type="time" value={requestModal.time} onChange={e => setRequestModal({...requestModal, time: e.target.value})} style={{ flex: 1, padding: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', outline: 'none' }} />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'rgba(255,255,255,0.7)', marginBottom: '8px' }}>
+                <MapPin size={16} /> 미팅 장소
+              </label>
+              <select value={requestModal.locationType} onChange={e => setRequestModal({...requestModal, locationType: e.target.value})} style={{ width: '100%', padding: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', appearance: 'none', outline: 'none' }}>
+                <option value="내 사무실">내 사무실</option>
+                <option value="상대 사무실">상대 사무실 (방문)</option>
+                <option value="온라인 (Zoom 등)">온라인 (Zoom 등)</option>
+                <option value="외부 카페/미팅룸">외부 카페/미팅룸</option>
+              </select>
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'rgba(255,255,255,0.7)', marginBottom: '8px' }}>
+                <MessageSquare size={16} /> 메시지 (목적)
+              </label>
+              <textarea 
+                value={requestModal.message} 
+                onChange={e => setRequestModal({...requestModal, message: e.target.value})} 
+                placeholder="간단한 인사말이나 논의할 안건을 적어주세요."
+                style={{ width: '100%', padding: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', height: '80px', resize: 'none', outline: 'none' }}
+              />
+            </div>
+
+            <button 
+              onClick={handleRequestSubmit}
+              style={{ width: '100%', padding: '14px', background: '#3742fa', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' }}
+            >
+              카카오톡으로 요청 보내기 💬
+            </button>
           </div>
         </div>
       )}
