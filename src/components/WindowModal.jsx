@@ -16,7 +16,7 @@ import VcpTracker from '../apps/VcpTracker';
 import BusinessMap from '../apps/BusinessMap';
 
 export default function WindowModal({ app, onClose }) {
-  const [isFullscreen, setIsFullscreen] = useState(app.id === 'business-map');
+  const [isFullscreen, setIsFullscreen] = useState(true);
 
   return (
     <div 
