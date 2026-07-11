@@ -11,7 +11,7 @@ export default function MemberDirectory() {
   });
 
   const [members, setMembers] = useState([]);
-  const [requestModal, setRequestModal] = useState({ isOpen: false, member: null, date: '', time: '', locationType: '내 사무실', message: '' });
+  const [requestModal, setRequestModal] = useState({ isOpen: false, member: null, dateOption: 'this_week', date: '이번 주 중', time: '시간 협의', locationType: '내 사무실', message: '' });
   const { currentUser } = useAuth();
   const myName = currentUser?.email?.split('@')[0] || 'Unknown';
 
@@ -180,7 +180,7 @@ export default function MemberDirectory() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Mail size={14} color="rgba(255,255,255,0.5)" /> {member.email}</div>
                   </div>
                   <button 
-                    onClick={() => setRequestModal({ isOpen: true, member, date: '', time: '', locationType: '내 사무실', message: '' })}
+                    onClick={() => setRequestModal({ isOpen: true, member, dateOption: 'this_week', date: '이번 주 중', time: '시간 협의', locationType: '내 사무실', message: '' })}
                     style={{ marginTop: '16px', width: '100%', padding: '8px', background: 'transparent', border: `1px solid ${member.color || '#3742fa'}`, color: member.color || '#3742fa', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
                   >
                     원투원 요청하기
@@ -291,10 +291,34 @@ export default function MemberDirectory() {
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'rgba(255,255,255,0.7)', marginBottom: '8px' }}>
                 <Calendar size={16} /> 희망 날짜 및 시간
               </label>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <input type="date" value={requestModal.date} onChange={e => setRequestModal({...requestModal, date: e.target.value})} style={{ flex: 1, padding: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', outline: 'none' }} />
-                <input type="time" value={requestModal.time} onChange={e => setRequestModal({...requestModal, time: e.target.value})} style={{ flex: 1, padding: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', outline: 'none' }} />
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                {[
+                  { id: 'asap', label: '최대한 빨리' },
+                  { id: 'this_week', label: '이번 주 중' },
+                  { id: 'next_week', label: '다음 주 중' },
+                  { id: 'custom', label: '직접 입력' }
+                ].map(opt => (
+                  <div 
+                    key={opt.id}
+                    onClick={() => {
+                      if (opt.id !== 'custom') {
+                        setRequestModal({...requestModal, dateOption: opt.id, date: opt.label, time: '시간 협의'});
+                      } else {
+                        setRequestModal({...requestModal, dateOption: opt.id, date: '', time: ''});
+                      }
+                    }}
+                    style={{ padding: '6px 12px', borderRadius: '16px', fontSize: '13px', cursor: 'pointer', background: requestModal.dateOption === opt.id ? '#3742fa' : 'rgba(255,255,255,0.1)', color: '#fff', border: `1px solid ${requestModal.dateOption === opt.id ? '#3742fa' : 'rgba(255,255,255,0.2)'}` }}
+                  >
+                    {opt.label}
+                  </div>
+                ))}
               </div>
+              {requestModal.dateOption === 'custom' && (
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <input type="date" value={requestModal.date} onChange={e => setRequestModal({...requestModal, date: e.target.value})} style={{ flex: 1, padding: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', outline: 'none' }} />
+                  <input type="time" value={requestModal.time} onChange={e => setRequestModal({...requestModal, time: e.target.value})} style={{ flex: 1, padding: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', outline: 'none' }} />
+                </div>
+              )}
             </div>
 
             <div style={{ marginBottom: '16px' }}>
@@ -313,10 +337,21 @@ export default function MemberDirectory() {
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'rgba(255,255,255,0.7)', marginBottom: '8px' }}>
                 <MessageSquare size={16} /> 메시지 (목적)
               </label>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                {['가벼운 티타임 ☕️', '비즈니스 협업 논의 🤝', '서로의 비즈니스 알아가기 💡', '식사 함께 해요 🍽️'].map((msg, i) => (
+                  <div 
+                    key={i}
+                    onClick={() => setRequestModal({...requestModal, message: msg})}
+                    style={{ padding: '6px 12px', borderRadius: '16px', fontSize: '13px', cursor: 'pointer', background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }}
+                  >
+                    {msg}
+                  </div>
+                ))}
+              </div>
               <textarea 
                 value={requestModal.message} 
                 onChange={e => setRequestModal({...requestModal, message: e.target.value})} 
-                placeholder="간단한 인사말이나 논의할 안건을 적어주세요."
+                placeholder="간단한 인사말이나 논의할 안건을 적어주세요. (위 버튼을 누르시면 자동 입력됩니다)"
                 style={{ width: '100%', padding: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', height: '80px', resize: 'none', outline: 'none' }}
               />
             </div>
