@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Maximize2, Minus } from 'lucide-react';
 import BlogApp from '../apps/BlogApp';
 import BniExcellent from '../apps/BniExcellent';
@@ -17,6 +17,16 @@ import BusinessMap from '../apps/BusinessMap';
 
 export default function WindowModal({ app, onClose }) {
   const [isFullscreen, setIsFullscreen] = useState(true);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   return (
     <div 
