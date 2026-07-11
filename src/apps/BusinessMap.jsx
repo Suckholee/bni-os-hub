@@ -547,8 +547,57 @@ export default function BusinessMap() {
         </div>
       </div>
 
-      {/* Map Container */}
-      <div style={{ flex: 1, overflow: 'hidden', position: 'relative', zIndex: 1, background: '#e5e3df' }}>
+      {/* Main Content Area */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
+        
+        {/* Left Panel: Member List */}
+        {showMembers && (
+          <div className="hide-scrollbar" style={{ 
+            width: '320px', 
+            background: 'rgba(0,0,0,0.2)', 
+            borderRight: '1px solid rgba(255,255,255,0.1)', 
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            padding: '16px'
+          }}>
+            <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px', fontWeight: 'bold', marginBottom: '8px', flexShrink: 0 }}>
+              검색된 멤버 ({filteredMembers.length}명)
+            </div>
+            {filteredMembers.map(member => {
+              const { color, icon } = getCategoryColorAndIcon(member);
+              const isActive = activeMarker === member.id;
+              return (
+                <div 
+                  key={`list-member-${member.id}`}
+                  onClick={() => handleSelectLocation({ lat: member.lat, lng: member.lng }, member.id)}
+                  style={{
+                    padding: '12px',
+                    background: isActive ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)',
+                    borderRadius: '12px',
+                    border: `1px solid ${isActive ? color : 'rgba(255,255,255,0.1)'}`,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    flexShrink: 0
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+                  onMouseOut={(e) => e.currentTarget.style.background = isActive ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)'}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>{icon}</div>
+                    <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '14px' }}>{member.name} 대표</div>
+                  </div>
+                  <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '13px', marginBottom: '4px', fontWeight: '500' }}>{member.company}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '11px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{member.tag || member.category}</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Map Container */}
+        <div style={{ flex: 1, overflow: 'hidden', position: 'relative', zIndex: 1, background: '#e5e3df' }}>
         {loading ? (
           <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666', fontWeight: 'bold' }}>지도 불러오는 중...</div>
         ) : error ? (
@@ -649,6 +698,7 @@ export default function BusinessMap() {
             />
           </Map>
         )}
+      </div>
       </div>
     </div>
   );
