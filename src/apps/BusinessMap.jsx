@@ -559,7 +559,12 @@ export default function BusinessMap() {
                           <div style={{ color: '#888', fontSize: '12px', marginBottom: '12px', wordBreak: 'keep-all', lineHeight: '1.4' }}>{member.address}</div>
                           <div style={{ display: 'flex', gap: '6px', marginTop: '12px' }}>
                             <button onClick={(e) => { e.stopPropagation(); handleNavi(member.company || member.name, member.lat, member.lng); }} style={{ flex: 1, padding: '8px 4px', background: '#FFEB00', color: '#3c1e1e', borderRadius: '6px', border: 'none', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>🚗 내비</button>
-                            <button onClick={(e) => { e.stopPropagation(); handleShare(member.name + ' 대표', member.company || member.category, member.address, `https://bni-os-hub.vercel.app`); }} style={{ flex: 1, padding: '8px 4px', background: '#FEE500', color: '#3c1e1e', borderRadius: '6px', border: 'none', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>💬 공유</button>
+                            <button onClick={(e) => { 
+                              e.stopPropagation(); 
+                              const tags = member.tag ? `\\n🏷️ 주요품목: ${member.tag}` : '';
+                              const desc = `${member.company || '회사정보 없음'} | ${member.category || '분류없음'}${tags}`;
+                              handleShare(`[BNI 타이탄] ${member.name} 대표`, desc, member.address, `https://bni-os-hub.vercel.app`); 
+                            }} style={{ flex: 1, padding: '8px 4px', background: '#FEE500', color: '#3c1e1e', borderRadius: '6px', border: 'none', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>💬 공유</button>
                             <button style={{ flex: 1, padding: '8px 4px', background: color, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', transition: 'opacity 0.2s' }} onMouseOver={(e) => e.target.style.opacity=0.8} onMouseOut={(e) => e.target.style.opacity=1}>프로필</button>
                           </div>
                           <button onClick={(e) => { e.stopPropagation(); setActiveMarker(null); }} style={{ position: 'absolute', top: '8px', right: '8px', border: 'none', background: 'rgba(0,0,0,0.05)', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '14px', color: '#666' }}>&times;</button>
