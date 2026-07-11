@@ -22,10 +22,10 @@ export default function WindowModal({ app, onClose }) {
     <div 
       style={{
         position: 'absolute',
-        top: isFullscreen ? 0 : '10%',
+        top: isFullscreen ? '32px' : '10%',
         left: isFullscreen ? 0 : '15%',
         width: isFullscreen ? '100%' : '70%',
-        height: isFullscreen ? '100%' : '75%',
+        height: isFullscreen ? 'calc(100% - 32px)' : '75%',
         borderRadius: isFullscreen ? 0 : '16px',
         display: 'flex',
         flexDirection: 'column',
