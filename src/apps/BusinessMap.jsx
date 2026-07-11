@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Map, CustomOverlayMap, useMap, useKakaoLoader } from 'react-kakao-maps-sdk';
 import { Search, Users, Calendar, MapPin, Navigation, X } from 'lucide-react';
 import { subscribeToMembers, subscribeToMeetings } from '../services/memberService';
@@ -306,6 +306,23 @@ function OutOfBoundsOverlay({ members, meetings, showMembers, showMeetings, onSe
 }
 
 export default function BusinessMap() {
+  const searchInputRef = useRef(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Do not trigger if the user is already typing in an input or textarea
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.key === '/') {
+        e.preventDefault();
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const [loading, error] = useKakaoLoader({
     appkey: "ee0b25764b258b22f4a955e76bbb2892",
     libraries: ["services", "clusterer"]
@@ -486,6 +503,7 @@ export default function BusinessMap() {
           <div style={{ display: 'flex', gap: '8px' }}>
             <div style={{ flex: 1, position: 'relative' }}>
               <input 
+                ref={searchInputRef}
                 type="text" 
                 placeholder="카카오 장소 검색, 혹은 멤버 상호명 검색..." 
                 value={searchQuery}
