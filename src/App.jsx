@@ -54,6 +54,28 @@ function AppContent() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [activeWindow]);
 
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!activeWindow) return;
+      if (e.shiftKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        const currentIndex = apps.findIndex(a => a.id === activeWindow.id);
+        if (currentIndex !== -1) {
+          let nextIndex;
+          if (e.key === 'ArrowLeft') {
+            nextIndex = (currentIndex - 1 + apps.length) % apps.length;
+          } else {
+            nextIndex = (currentIndex + 1) % apps.length;
+          }
+          // Use replaceState to avoid cluttering history when switching with arrows
+          setActiveWindow(apps[nextIndex]);
+          window.history.replaceState({ modalOpen: true, appId: apps[nextIndex].id }, '');
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeWindow]);
+
   if (!currentUser) {
     return <LoginScreen />;
   }
