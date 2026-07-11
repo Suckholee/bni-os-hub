@@ -16,7 +16,7 @@ const getCategoryColorAndIcon = (member) => {
   if (category.includes('꽃') || category.includes('플라워')) return { color: '#ffb8b8', icon: '🌸' };
   if (category.includes('법률') || category.includes('세무') || category.includes('노무') || category.includes('회계') || category.includes('변호사')) return { color: '#3dc1d3', icon: '⚖️' };
   if (category.includes('금융') || category.includes('보험')) return { color: '#f5cd79', icon: '💰' };
-  if (category.includes('it') || category.includes('소프트웨어') || category.includes('개발') || category.includes('컴퓨터') || category.includes('마케팅')) return { color: '#546de5', icon: '💻' };
+  if (/\bit\b/.test(tag) || /\bit\b/.test(category) || tag.includes('아이티') || category.includes('아이티') || tag.includes('소프트웨어') || category.includes('소프트웨어') || tag.includes('개발') || category.includes('개발') || tag.includes('컴퓨터') || category.includes('컴퓨터') || tag.includes('마케팅') || category.includes('마케팅')) return { color: '#546de5', icon: '💻' };
   if (category.includes('스포츠') || category.includes('골프') || category.includes('레져')) return { color: '#1abc9c', icon: '⛳' };
   
   return { color: '#3742fa', icon: '👤' };
@@ -468,7 +468,12 @@ export default function BusinessMap() {
     const category = (member.category || '').toLowerCase();
     const tag = (member.tag || '').toLowerCase();
     
-    return catDef.keywords.some(kw => category.includes(kw) || tag.includes(kw));
+    return catDef.keywords.some(kw => {
+      if (kw === 'it') {
+        return /\bit\b/.test(category) || /\bit\b/.test(tag) || category.includes('아이티') || tag.includes('아이티');
+      }
+      return category.includes(kw) || tag.includes(kw);
+    });
   });
 
   return (
